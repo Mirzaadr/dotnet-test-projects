@@ -1,0 +1,10 @@
+@HostAddress = http://localhost:5214
+@CustomerId = 1
+
+PUT {{HostAddress}}/api/customers/{{CustomerId}}
+Content-Type: application/json
+
+{
+    "id": 1,
+    "name": "Janet"
+}
