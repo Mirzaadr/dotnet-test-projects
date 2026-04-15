@@ -1,4 +1,0 @@
-@HostAddress = http://localhost:5214
-@CustomerId = 2
-
-GET {{HostAddress}}/api/customers/{{CustomerId}}
