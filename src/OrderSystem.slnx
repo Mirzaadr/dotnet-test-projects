@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/App/">
+    <Project Path="App/OrderService.Application/OrderService.Application.csproj" />
+    <Project Path="App/OrderService.Domain/OrderService.Domain.csproj" />
+    <Project Path="App/OrderService.Infrastructure/OrderService.Infrastructure.csproj" />
+    <Project Path="App/OrderService.WebAPI/OrderService.WebAPI.csproj" />
+    <Project Path="App/OrderService.WebApp/OrderService.WebApp.csproj" />
+  </Folder>
+  <Folder Name="/Workers/">
+    <Project Path="Workers/PaymentWorker/PaymentWorker.csproj" />
+  </Folder>
+</Solution>
