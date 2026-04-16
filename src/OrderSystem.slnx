@@ -8,6 +8,7 @@
   </Folder>
   <Folder Name="/Workers/">
     <Project Path="Workers/InventoryWorker/InventoryWorker.csproj" />
+    <Project Path="Workers/OrderWorker/OrderWorker.csproj" />
     <Project Path="Workers/PaymentWorker/PaymentWorker.csproj" />
   </Folder>
 </Solution>

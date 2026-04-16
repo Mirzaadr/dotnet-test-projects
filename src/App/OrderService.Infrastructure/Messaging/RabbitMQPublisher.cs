@@ -23,6 +23,7 @@ public class RabbitMqPublisher : IMessagePublisher
         {
             nameof(OrderCreatedEvent) => "order.created",
             nameof(PaymentCompletedEvent) => "payment.completed",
+            nameof(InventoryReservedEvent) => "inventory.reserved",
             _ => throw new Exception("Unknown event type")
         };
 

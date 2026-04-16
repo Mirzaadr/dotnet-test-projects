@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using OrderService.Application.Common.Interfaces;
 using OrderService.Application.Messaging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -10,10 +11,12 @@ namespace InventoryWorker;
 public class Worker : BackgroundService
 {
     private readonly IConnection _connection;
+    private readonly IMessagePublisher _publisher;
 
-    public Worker(IConnection connection)
+    public Worker(IConnection connection, IMessagePublisher publisher)
     {
         _connection = connection;
+        _publisher = publisher;
     }
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -31,14 +34,24 @@ public class Worker : BackgroundService
 
         var consumer = new EventingBasicConsumer(channel);
 
-        consumer.Received += (model, ea) =>
+        consumer.Received += async (model, ea) =>
         {
             var json = Encoding.UTF8.GetString(ea.Body.ToArray());
             var evt = JsonSerializer.Deserialize<PaymentCompletedEvent>(json);
 
             if (evt!.Success)
             {
-                Console.WriteLine($"📦 Updating inventory for Order {evt.OrderId}");
+                Console.WriteLine($"📦 Reserving inventory for {evt.OrderId}");
+
+                await Task.Delay(1000); // simulate
+
+                await _publisher.PublishAsync(new InventoryReservedEvent
+                {
+                    OrderId = evt.OrderId,
+                    Success = true
+                });
+
+                Console.WriteLine($"✅ Inventory reserved for {evt.OrderId}");
             }
             else
             {
