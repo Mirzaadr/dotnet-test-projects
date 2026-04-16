@@ -1,6 +1,9 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using OrderService.Application.Common.Interfaces;
 using OrderService.Application.Messaging;
+using OrderService.Application.Orders.Command.CreateOrder;
+using OrderService.WebAPI.Contracts;
 
 namespace OrderService.WebAPI.Controllers;
 
@@ -8,25 +11,26 @@ namespace OrderService.WebAPI.Controllers;
 [Route("api/orders")]
 public class OrderController : ControllerBase
 {
-    private readonly IMessagePublisher _publisher;
+    // private readonly ISender _mediator;
+    private readonly CreateOrderCommandHandler _handler;
 
-    public OrderController(IMessagePublisher publisher)
+    public OrderController(CreateOrderCommandHandler handler)
     {
-        _publisher = publisher;
+        // _mediator = mediator;
+        _handler = handler;
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create()
+    public async Task<IActionResult> Create(CreateOrderRequest request)
     {
-        var evt = new OrderCreatedEvent
+        var command = new CreateOrderCommand
         {
-            OrderId = Guid.NewGuid(),
-            Email = "test@email.com",
-            Amount = 100
+            Email = request.Email,
+            Amount = request.Amount
         };
+        // var orderId = await _mediator.Send(command);
+        var orderId = await _handler.Handle(command);
 
-        await _publisher.PublishAsync(evt);
-
-        return Ok("Order event published");
+        return Ok(new { OrderId = orderId });
     }
 }

@@ -7,6 +7,7 @@
     <Project Path="App/OrderService.WebApp/OrderService.WebApp.csproj" />
   </Folder>
   <Folder Name="/Workers/">
+    <Project Path="Workers/InventoryWorker/InventoryWorker.csproj" />
     <Project Path="Workers/PaymentWorker/PaymentWorker.csproj" />
   </Folder>
 </Solution>

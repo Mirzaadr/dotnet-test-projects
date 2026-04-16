@@ -1,6 +1,16 @@
-﻿namespace OrderService.Application;
+﻿using MediatR;
+using Microsoft.Extensions.DependencyInjection;
+using OrderService.Application.Orders.Command.CreateOrder;
 
-public class DependencyInjection
+namespace OrderService.Application;
+
+public static class DependencyInjection
 {
-
+    public static IServiceCollection AddApplication(this IServiceCollection services)
+    {
+        // services.AddMediatR(typeof(DependencyInjection).Assembly);
+        services.AddScoped<CreateOrderCommandHandler>();
+    
+        return services;
+    }
 }
