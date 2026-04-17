@@ -10,56 +10,47 @@ namespace InventoryWorker;
 // (ILogger<Worker> logger)
 public class Worker : BackgroundService
 {
-    private readonly IConnection _connection;
     private readonly IMessagePublisher _publisher;
+    private readonly IMessageConsumer _consumer;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public Worker(IConnection connection, IMessagePublisher publisher)
+    public Worker(
+        IMessagePublisher publisher, 
+        IMessageConsumer consumer, 
+        IServiceScopeFactory scopeFactory
+    )
     {
-        _connection = connection;
         _publisher = publisher;
+        _consumer = consumer;
+        _scopeFactory = scopeFactory;
     }
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // while (!stoppingToken.IsCancellationRequested)
-        // {
-        //     if (logger.IsEnabled(LogLevel.Information))
-        //     {
-        //         logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-        //     }
-        //     await Task.Delay(1000, stoppingToken);
-        // }
-
-        var channel = _connection.CreateModel();
-        channel.QueueDeclare("payment.completed", true, false, false);
-
-        var consumer = new EventingBasicConsumer(channel);
-
-        consumer.Received += async (model, ea) =>
-        {
-            var json = Encoding.UTF8.GetString(ea.Body.ToArray());
-            var evt = JsonSerializer.Deserialize<PaymentCompletedEvent>(json);
-
-            if (evt!.Success)
+        _consumer.Consume<PaymentCompletedEvent>(
+            queueName: "payment.completed",
+            handler: async (message, sp) =>
             {
-                Console.WriteLine($"📦 Reserving inventory for {evt.OrderId}");
-
-                await Task.Delay(1000); // simulate
-
-                await _publisher.PublishAsync(new InventoryReservedEvent
+                if (message.Success)
                 {
-                    OrderId = evt.OrderId,
-                    Success = true
-                });
+                    Console.WriteLine($"📦 Reserving inventory for {message.OrderId}");
 
-                Console.WriteLine($"✅ Inventory reserved for {evt.OrderId}");
-            }
-            else
-            {
-                Console.WriteLine($"❌ Payment failed for Order {evt.OrderId}");
-            }
-        };
+                    await Task.Delay(1000, stoppingToken); // simulate
 
-        channel.BasicConsume("payment.completed", true, consumer);
+                    await _publisher.PublishAsync(new InventoryReservedEvent
+                    {
+                        OrderId = message.OrderId,
+                        Success = true
+                    });
+
+                    Console.WriteLine($"✅ Inventory reserved for {message.OrderId}");
+                }
+                else
+                {
+                    Console.WriteLine($"❌ Payment failed for Order {message.OrderId}");
+                }
+            },
+            scopeFactory: _scopeFactory
+        );
 
         return Task.CompletedTask;
     }

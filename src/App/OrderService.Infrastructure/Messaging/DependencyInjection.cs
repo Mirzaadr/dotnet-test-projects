@@ -33,6 +33,7 @@ public static class DependencyInjection
         });
 
         services.AddSingleton<IMessagePublisher, RabbitMqPublisher>();
+        services.AddSingleton<IMessageConsumer, RabbitMqConsumer>();
 
         return services;
     }

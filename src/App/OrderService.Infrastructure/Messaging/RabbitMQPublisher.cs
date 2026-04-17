@@ -3,6 +3,7 @@ using System.Text.Json;
 using RabbitMQ.Client;
 using OrderService.Application.Common.Interfaces;
 using OrderService.Application.Messaging;
+using OrderService.Application.Messaging.Helper;
 
 namespace OrderService.Infrastructure.Messaging;
 
@@ -19,14 +20,7 @@ public class RabbitMqPublisher : IMessagePublisher
     {
         using var channel = _connection.CreateModel();
 
-        var queueName = typeof(T).Name switch
-        {
-            nameof(OrderCreatedEvent) => "order.created",
-            nameof(PaymentCompletedEvent) => "payment.completed",
-            nameof(InventoryReservedEvent) => "inventory.reserved",
-            _ => throw new Exception("Unknown event type")
-        };
-
+        string? queueName = QueueNameResolver.GetQueueName<T>();
 
         channel.QueueDeclare(
             queue: queueName,

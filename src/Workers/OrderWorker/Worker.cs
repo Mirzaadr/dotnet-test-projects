@@ -4,69 +4,58 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using OrderService.Application.Messaging;
 using OrderService.Application.Repositories;
+using OrderService.Application.Common.Interfaces;
 
 namespace OrderWorker;
 
 public class Worker : BackgroundService
 {
-    private readonly IConnection _connection;
-    private readonly IOrderRepository _repository;
+    private readonly IMessageConsumer _messageConsumer;
     private readonly IServiceScopeFactory _scopeFactory;
 
     public Worker(
-        IConnection connection,
-        IOrderRepository repository,
-        IServiceScopeFactory scopeFactory)
+        IMessageConsumer consumer, 
+        IServiceScopeFactory scopeFactory
+    )
     {
-        _connection = connection;
-        _repository = repository;
+        _messageConsumer = consumer;
         _scopeFactory = scopeFactory;
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var channel = _connection.CreateModel();
-
-        channel.QueueDeclare("inventory.reserved", true, false, false);
-
-        var consumer = new EventingBasicConsumer(channel);
-
-        consumer.Received += async (model, ea) =>
-        {
-            using var scope = _scopeFactory.CreateScope();
-
-            var repository = scope.ServiceProvider
-                .GetRequiredService<IOrderRepository>();
-
-            var json = Encoding.UTF8.GetString(ea.Body.ToArray());
-            var evt = JsonSerializer.Deserialize<InventoryReservedEvent>(json);
-
-            Console.WriteLine($"🧾 Updating order {evt!.OrderId}");
-
-            var order = await repository.GetByIdAsync(evt.OrderId);
-
-            if (order == null)
+        _messageConsumer.Consume<InventoryReservedEvent>(
+            queueName: "inventory.reserved",
+            handler: async (message, sp) =>
             {
-                Console.WriteLine("❌ Order not found");
-                return;
-            }
+                var repository = sp
+                    .GetRequiredService<IOrderRepository>();
 
-            if (evt.Success)
-            {
-                order.MarkPaid();
-                // order.MarkCompleted();
-            }
-            else
-            {
-                order.MarkFailed();
-            }
+                Console.WriteLine($"🧾 Updating order {message.OrderId}");
 
-            await repository.UpdateAsync(order);
+                var order = await repository.GetByIdAsync(message.OrderId);
 
-            Console.WriteLine($"✅ Order updated: {order.Id}");
-        };
+                if (order == null)
+                {
+                    throw new Exception("Order not exist");
+                }
 
-        channel.BasicConsume("inventory.reserved", true, consumer);
+                if (message.Success)
+                {
+                    // Console.WriteLine($"✅ Order Paid: {evt.OrderId}");
+                    // order.MarkPaid();
+                    order.MarkCompleted();
+                }
+                else
+                {
+                    // Console.WriteLine($"❌ Order update Fail: {evt.OrderId}");
+                    order.MarkFailed();
+                }
+
+                await repository.UpdateAsync(order);
+            },
+            scopeFactory: _scopeFactory
+        );
 
         return Task.CompletedTask;
     }

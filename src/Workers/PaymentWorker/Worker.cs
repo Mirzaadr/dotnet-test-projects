@@ -25,47 +25,40 @@ namespace PaymentWorker;
 
 public class Worker : BackgroundService
 {
-    private readonly IConnection _connection;
     private readonly IMessagePublisher _messagePublisher;
+    private readonly IMessageConsumer _messageConsumer;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public Worker(IConnection connection, IMessagePublisher messagePublisher)
+    public Worker(
+        IMessagePublisher messagePublisher,
+        IMessageConsumer messageConsumer,
+        IServiceScopeFactory scopeFactory)
     {
-        _connection = connection;
         _messagePublisher = messagePublisher;
+        _messageConsumer = messageConsumer;
+        _scopeFactory = scopeFactory;
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var channel = _connection.CreateModel();
-
-        channel.QueueDeclare("order.created", true, false, false);
-
-        var consumer = new EventingBasicConsumer(channel);
-
-        consumer.Received += async (model, ea) =>
-        {
-            var body = ea.Body.ToArray();
-            var json = Encoding.UTF8.GetString(body);
-            var order = JsonSerializer.Deserialize<OrderCreatedEvent>(json);
-
-            Console.WriteLine($"💰 Processing payment for Order: {order?.OrderId}");
-
-            // simulate success
-            await Task.Delay(1000);
-
-            var success = true;
-
-            // publish next event
-            await _messagePublisher.PublishAsync(new PaymentCompletedEvent
+        _messageConsumer.Consume<OrderCreatedEvent>(
+            queueName: "order.created",
+            handler: async (message, sp) =>
             {
-                OrderId = order!.OrderId,
-                Success = success
-            });
+                Console.WriteLine($"💰 Processing {message.OrderId}");
 
-            Console.WriteLine($"✅ Payment completed for {order.OrderId}");
-        };
+                await Task.Delay(1000, stoppingToken);
 
-        channel.BasicConsume(queue: "order.created", autoAck: true, consumer: consumer);
+                await _messagePublisher.PublishAsync(new PaymentCompletedEvent
+                {
+                    OrderId = message.OrderId,
+                    Success = true
+                });
+
+                Console.WriteLine($"✅ Payment completed {message.OrderId}");
+            },
+            scopeFactory: _scopeFactory
+        );
 
         return Task.CompletedTask;
     }

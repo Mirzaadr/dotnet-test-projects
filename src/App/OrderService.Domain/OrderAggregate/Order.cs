@@ -25,6 +25,9 @@ public class Order
 
     public void MarkPaid()
     {
+        if (Status == OrderStatus.Paid)
+            return;
+        
         if (Status != OrderStatus.Created)
             throw new InvalidOperationException("Order cannot be paid");
 
@@ -33,6 +36,23 @@ public class Order
 
     public void MarkFailed()
     {
+        if (Status == OrderStatus.Failed)
+            return;
+        
+        if (Status == OrderStatus.Completed)
+            throw new InvalidOperationException("Completed order cannot fail");
+
         Status = OrderStatus.Failed;
+    }
+
+    public void MarkCompleted()
+    {
+        if (Status == OrderStatus.Completed)
+            return;
+        
+        if (Status != OrderStatus.Paid)
+            throw new InvalidOperationException("Order must be paid before completion");
+
+        Status = OrderStatus.Completed;
     }
 }
