@@ -22,11 +22,12 @@ public class RabbitMqPublisher : IMessagePublisher
 
         string? queueName = QueueNameResolver.GetQueueName<T>();
 
-        channel.QueueDeclare(
-            queue: queueName,
-            durable: true,
-            exclusive: false,
-            autoDelete: false);
+        // channel.QueueDeclare(
+        //     queue: queueName,
+        //     durable: true,
+        //     exclusive: false,
+        //     autoDelete: false);
+        RabbitMqTopology.ConfigureQueue(channel, queueName);
 
         var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
 
